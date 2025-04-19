@@ -185,7 +185,7 @@ if __name__ == '__main__':
     ttk.Label(frame, text="Функция Z =").grid(row=10, column=0, sticky="nw")
     z_func_entry = tk.Text(frame, width=40, height=4)
     z_func_entry.grid(row=10, column=1, columnspan=3, sticky="w")
-    z_func_entry.insert("1.0", "pow(z, 2) + c")
+    z_func_entry.insert("1.0", "pow(z, oct(2)) + c")
     
     # Итерации и радиус выхода
     ttk.Label(frame, text="Макс. итераций").grid(row=11, column=0)
@@ -239,8 +239,9 @@ if __name__ == '__main__':
     len_colors = tk.StringVar(value="short")  # по умолчанию коротко
     ttk.Radiobutton(frame, text="Короткий градиент", variable=len_colors, value="short").grid(row=18, column=0)
     ttk.Radiobutton(frame, text="Растянутый градиент", variable=len_colors, value="long").grid(row=18, column=1)
+
     
     # Кнопка отправки
-    ttk.Button(frame, text="Применить", command=submit).grid(row=19, column=0, columnspan=4, pady=10)
+    ttk.Button(frame, text="Применить", command=submit).grid(row=20, column=0, columnspan=4, pady=10)
     
     root.mainloop()

@@ -2,7 +2,8 @@ import textwrap
 from numba import njit, prange
 from types import FunctionType
 from typing import Callable, Dict
-from func_defef import gamma_function, betta_function, octonion_norm, octonion_vector_norm, octonion_add, octonion_pow
+from func_defef import gamma_function, betta_function, octonion_norm, octonion_vector_norm
+from func_defef import multiply_octonions, octonion_pow, divide_octonions, make_octonion, octonion_exp, octonion_log
 import numpy as np
 
 
@@ -10,7 +11,7 @@ import numpy as np
 def z_index(z, gradient, iteration, max_iterations, scale_type, log_type, escape_radius):
     n_colors = gradient.shape[0]
     
-    # Вычисляем нормированное значение для выбора цвета
+
     if scale_type == "linear":
         return  iteration % len(gradient)
     else:
@@ -42,6 +43,7 @@ def compiledExpression(expr: str, functions: list):
             colors = np.zeros((len(x), 3), dtype=np.uint8)  # Массив для цветов
             for len_x in prange(len(x)):  # Проходим по всем элементам x
                 xi = x[len_x]
+                m = 0 #заглушка для реверса
                 c = np.array([xi, yi, hi, zi, ti, ui, vi, wi])
                 z = np.array([xi, yi, hi, zi, ti, ui, vi, wi])
                 for i in range(max_iterations):
@@ -51,9 +53,10 @@ def compiledExpression(expr: str, functions: list):
                     if z is None:
                         colors[len_x] = gradient[0]
                         break
-                    elif norm(z) >= escape_radius:
+                    elif norm(z) > escape_radius:
                         colors[len_x] = gradient[z_index(z, gradient, i, max_iterations, scale_type, log_type, escape_radius)]
                         break
+            
                 if i == max_iterations - 1:
                     colors[len_x] = color3
             return colors
@@ -82,35 +85,40 @@ def coth(vector):
 
 functions = np.array([
    ('z_index', z_index),  
-   ('mod', np.linalg.norm), 
-   ('sin', np.sin), 
-   ('cos', np.cos),
-   ('tg', np.tan),
-   ('ctg', cot),
-   ('sinh', np.sinh),
-   ('cosh', np.cosh),
-   ('tgh', np.tanh),
-   ('ctgh', coth),
-   ('sqrt', np.sqrt),
-   ('exp', np.exp),
-   ('log', np.log),
-   ('log10', np.log10),
-   ('log2', np.log2),
-   ('arcsin', np.arcsin),
-   ('arccos', np.arccos),
-   ('arctg', np.arctan),
-   ('arcctg', arccot),
-   ('arcsinh', np.arcsinh),
-   ('arccosh', np.arccosh),
-   ('arctgh', np.arctanh),
-   ('arcctgh', arccoth),
-   ('gamma', gamma_function), 
-   ('betta', betta_function), 
    ('prange', prange), 
+   
+   ('n_sin', np.sin), 
+   ('n_cos', np.cos),
+   ('n_tg', np.tan),
+   ('n_ctg', cot),
+   ('n_sinh', np.sinh),
+   ('n_cosh', np.cosh),
+   ('n_tgh', np.tanh),
+   ('n_ctgh', coth),
+   ('n_sqrt', np.sqrt),
+   ('n_exp', np.exp),
+   ('n_log', np.log),
+   ('n_log10', np.log10),
+   ('n_log2', np.log2),
+   ('n_arcsin', np.arcsin),
+   ('n_arccos', np.arccos),
+   ('n_arctg', np.arctan),
+   ('n_arcctg', arccot),
+   ('n_arcsinh', np.arcsinh),
+   ('n_arccosh', np.arccosh),
+   ('n_arctgh', np.arctanh),
+   ('n_arcctgh', arccoth),
+   ('n_gamma', gamma_function), 
+   ('n_betta', betta_function), 
+   
    ('norm', octonion_norm), 
    ('vector_norm', octonion_vector_norm), 
-   ('add', octonion_add), 
-   ('pow', octonion_pow)
+   ('mult', multiply_octonions), #умножение
+   ('pow', octonion_pow), #степень
+   ('dell', divide_octonions), #деление
+   ('oct', make_octonion), #создать октанион
+   ('exp', octonion_exp), #экспонента
+   ('log', octonion_log), #логарифм
    ])
 
 

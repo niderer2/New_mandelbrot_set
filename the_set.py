@@ -148,15 +148,16 @@ def render(name, min_x, max_x, min_y, max_y, min_h, max_h, min_z, max_z, min_t, 
     z_function = compiledExpression(z_funct, functions)
     
     # Начальные параметры
-    total_x, total_y = 300, 300  # Общий размер итогового изображения
-    chunk_size = 100             # Размер сектора: 100x100
+    total_x, total_y = 100, 100  # Общий размер итогового изображения
+    chunk_size = 50             # Размер сектора: 100x100
     len_gradient = 100
-    range_h = 1 if min_h == max_h else 10
-    range_z = 1 if min_z == max_z else 10
-    range_t = 1 if min_t == max_t else 10
-    range_u = 1 if min_u == max_u else 10
-    range_v = 1 if min_v == max_v else 10
-    range_w = 1 if min_w == max_w else 10
+    k1, k10 = 1, 10 #коофиценты генерации если ранж равен и не равен друг другу
+    range_h = k1 if min_h == max_h else k10
+    range_z = k1 if min_z == max_z else k10
+    range_t = k1 if min_t == max_t else k10
+    range_u = k1 if min_u == max_u else k10
+    range_v = k1 if min_v == max_v else k10
+    range_w = k1 if min_w == max_w else k10
 
     # Создаём оси
     x_all = np.linspace(min_x, max_x, total_x)
