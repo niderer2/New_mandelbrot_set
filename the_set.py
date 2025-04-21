@@ -148,8 +148,8 @@ def render(name, min_x, max_x, min_y, max_y, min_h, max_h, min_z, max_z, min_t, 
     z_function = compiledExpression(z_funct, functions)
     
     # Начальные параметры
-    total_x, total_y = 100, 100  # Общий размер итогового изображения
-    chunk_size = 50             # Размер сектора: 100x100
+    total_x, total_y = 300, 300  # Общий размер итогового изображения
+    chunk_size = 100             # Размер сектора: 100x100
     len_gradient = 100
     k1, k10 = 1, 10 #коофиценты генерации если ранж равен и не равен друг другу
     range_h = k1 if min_h == max_h else k10

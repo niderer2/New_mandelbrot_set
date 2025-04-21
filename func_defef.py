@@ -170,3 +170,11 @@ def divide_octonions(a, b):
     res[:4] = part0
     res[4:] = part1
     return res
+
+@njit
+def step(arr, shift=1):
+    n = len(arr)
+    result = np.empty(n, dtype=arr.dtype)
+    for i in range(n):
+        result[(i + shift) % n] = arr[i]
+    return result

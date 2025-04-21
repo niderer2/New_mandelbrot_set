@@ -3,7 +3,7 @@ from numba import njit, prange
 from types import FunctionType
 from typing import Callable, Dict
 from func_defef import gamma_function, betta_function, octonion_norm, octonion_vector_norm
-from func_defef import multiply_octonions, octonion_pow, divide_octonions, make_octonion, octonion_exp, octonion_log
+from func_defef import multiply_octonions, octonion_pow, divide_octonions, make_octonion, octonion_exp, octonion_log, step
 import numpy as np
 
 
@@ -119,6 +119,7 @@ functions = np.array([
    ('oct', make_octonion), #создать октанион
    ('exp', octonion_exp), #экспонента
    ('log', octonion_log), #логарифм
+   ('step', step), #сдвиг
    ])
 
 
