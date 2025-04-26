@@ -4,6 +4,9 @@ from types import FunctionType
 from typing import Callable, Dict
 from func_defef import gamma_function, betta_function, octonion_norm, octonion_vector_norm
 from func_defef import multiply_octonions, octonion_pow, divide_octonions, make_octonion, octonion_exp, octonion_log, step
+from func_defef import octonion_sin, octonion_cos, octonion_tan, octonion_cot, octonion_sec, octonion_csc
+from func_defef import octonion_sinh, octonion_cosh, octonion_tanh, octonion_coth, octonion_sech, octonion_csch
+from func_defef import octonion_arcsin, octonion_arccos, octonion_arctan, octonion_arccot, octonion_arcsec, octonion_arccsc, octonion_arsinh, octonion_arcosh, octonion_artanh, octonion_arcoth, octonion_arsech, octonion_arcsch
 import numpy as np
 
 
@@ -71,6 +74,7 @@ def compiledExpression(expr: str, functions: list):
     return exec_context['compiled_func']
 
 
+
 def cot(vector):
     return 1 / np.tan(vector)
 
@@ -120,6 +124,34 @@ functions = np.array([
    ('exp', octonion_exp), #экспонента
    ('log', octonion_log), #логарифм
    ('step', step), #сдвиг
+   
+   ('sin', octonion_sin),
+   ('cos', octonion_cos),
+   ('tg', octonion_tan),
+   ('ctg', octonion_cot),
+   ('sec', octonion_sec),
+   ('csc', octonion_csc),
+   
+   ('sinh', octonion_sinh),
+   ('cosh', octonion_cosh),
+   ('tgh', octonion_tanh),
+   ('ctgh', octonion_coth),
+   ('sech', octonion_sech),
+   ('csch', octonion_csch), 
+   
+   ('arcsin', octonion_arcsin), 
+   ('arcos', octonion_arccos), 
+   ('arctg', octonion_arctan), 
+   ('arcctg', octonion_arccot), 
+   ('arcsec', octonion_arcsec), 
+   ('arccsc', octonion_arccsc), 
+   
+   ('arsinh', octonion_arsinh), 
+   ('arcosh', octonion_arcosh), 
+   ('artgh', octonion_artanh), 
+   ('arcgh', octonion_arcoth), 
+   ('arsech', octonion_arsech), 
+   ('arcsch)', octonion_arcsch)
    ])
 
 

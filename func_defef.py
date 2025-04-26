@@ -2,6 +2,7 @@ import numpy as np
 from numba import njit, float64, types
 from numba.experimental import jitclass
 import math
+import cmath
 
 
 def hex_to_rgb(hex_color):
@@ -40,12 +41,15 @@ def octonion_vector_norm(o):
 
 
 @njit
-def multiply_octonions(a, b):
+def multiply_octonions(a, b, f=False):
     result = np.zeros(8)
-    
     # Сокращения для удобства
-    a0, a1, a2, a3, a4, a5, a6, a7 = a
-    b0, b1, b2, b3, b4, b5, b6, b7 = b
+    if f:
+        a0, a1, a2, a3, a4, a5, a6, a7 = b
+        b0, b1, b2, b3, b4, b5, b6, b7 = a
+    else:
+        a0, a1, a2, a3, a4, a5, a6, a7 = a
+        b0, b1, b2, b3, b4, b5, b6, b7 = b        
 
     result[0] =  a0*b0 - a1*b1 - a2*b2 - a3*b3 - a4*b4 - a5*b5 - a6*b6 - a7*b7
     result[1] =  a0*b1 + a1*b0 + a2*b3 - a3*b2 + a4*b5 - a5*b4 - a6*b7 + a7*b6
@@ -178,3 +182,147 @@ def step(arr, shift=1):
     for i in range(n):
         result[(i + shift) % n] = arr[i]
     return result
+
+
+
+
+@njit
+def octonion_sin(o, n=0):
+    num_bits = 32
+
+    # Получаем двоичное представление числа в виде списка бит
+    s = [(n >> i) & 1 for i in range(num_bits)]  # Сдвигаем и извлекаем биты
+
+    # Используем побитовые значения
+    io = multiply_octonions(make_octonion(0, 1), o, s[0] == 1)
+    neg_io = multiply_octonions(make_octonion(0, -1), o, s[1] == 1 if len(s) > 1 else False)
+    temp1 = octonion_exp(io)
+    temp2 = octonion_exp(neg_io)
+    diff = temp1 - temp2
+    denom = multiply_octonions(make_octonion(0, 1), make_octonion(2), s[2] == 1 if len(s) > 2 else False)
+    
+    return divide_octonions(diff, denom)
+
+@njit
+def octonion_cos(o, n=0):
+    num_bits = 32
+
+    # Получаем двоичное представление числа в виде списка бит
+    s = [(n >> i) & 1 for i in range(num_bits)]  # Сдвигаем и извлекаем биты
+
+    # Используем побитовые значения для вычисления косинуса
+    io = multiply_octonions(make_octonion(0, 1), o, s[0] == 1)
+    neg_io = multiply_octonions(make_octonion(0, -1), o, s[1] == 1 if len(s) > 1 else False)
+    temp1 = octonion_exp(io)
+    temp2 = octonion_exp(neg_io)
+    
+    # Вычисление косинуса (среднее значение экспоненциальных функций)
+    return (temp1 + temp2) / 2
+
+@njit
+def octonion_tan(o, n1=0, n2=0):
+    return divide_octonions(octonion_sin(o, n1), octonion_cos(o, n2))
+
+@njit
+def octonion_cot(o, n1=0, n2=0):
+    return divide_octonions(octonion_cos(o, n1), octonion_sin(o, n2))
+
+@njit
+def octonion_sec(o, n=0):
+    return divide_octonions(make_octonion(1.0), octonion_cos(o, n))
+
+@njit
+def octonion_csc(o, n=0):
+    return divide_octonions(make_octonion(1.0), octonion_sin(o, n))
+
+# Гиперболические функции
+@njit
+def octonion_sinh(o):
+    return divide_octonions((octonion_exp(o) - octonion_exp(-o)), make_octonion(2.0))
+
+@njit
+def octonion_cosh(o):
+    return divide_octonions((octonion_exp(o) + octonion_exp(-o)), make_octonion(2.0))
+
+@njit
+def octonion_tanh(o):
+    return divide_octonions(octonion_sinh(o), octonion_cosh(o))
+
+@njit
+def octonion_coth(o):
+    return divide_octonions(octonion_cosh(o), octonion_sinh(o))
+
+@njit
+def octonion_sech(o):
+    return divide_octonions(make_octonion(1.0), octonion_cosh(o))
+
+@njit
+def octonion_csch(o):
+    return divide_octonions(make_octonion(1.0), octonion_sinh(o))
+
+# Арк-функции
+@njit
+def octonion_arcsin(o, n=0):
+    s = [(n >> i) & 1 for i in range(4)]
+    io = multiply_octonions(make_octonion(0, 1), o, bool(s[0]))
+    o2 = multiply_octonions(o, o, bool(s[1]))
+    sqrt_term = octonion_pow(make_octonion(1.0) - o2, make_octonion(0.5))
+    term = multiply_octonions(make_octonion(0, 1), sqrt_term, bool(s[2]))
+    log_val = octonion_log(io + term, n)
+    return -multiply_octonions(make_octonion(0, 1), log_val, bool(s[3]))
+
+
+@njit
+def octonion_arccos(o, n=0):
+    return make_octonion(math.pi / 2) - octonion_arcsin(o, n)
+
+@njit
+def octonion_arctan(o, n=0):
+    s = [(n >> i) & 1 for i in range(2)]
+    io = multiply_octonions(make_octonion(0, 1), o, bool(s[0]))
+    half = (
+        octonion_log(make_octonion(1.0) + io, n) - octonion_log(make_octonion(1.0) - io, n)) / make_octonion(2.0)
+    return multiply_octonions(make_octonion(0, 1), half, bool(s[1]))
+
+
+@njit
+def octonion_arccot(o, n=0):
+    return octonion_arctan(make_octonion(1.0) / o, n)
+
+@njit
+def octonion_arcsec(o, n=0):
+    return octonion_arccos(make_octonion(1.0) / o, n)
+
+@njit
+def octonion_arccsc(o, n=0):
+    return octonion_arcsin(make_octonion(1.0) / o, n)
+
+@njit
+def octonion_arsinh(o):
+    sqrt_term = octonion_pow(octonion_pow(o, make_octonion(2)) + make_octonion(1.0), make_octonion(0.5))
+    return octonion_log(o + sqrt_term)
+
+@njit
+def octonion_arcosh(o):
+    sqrt_term = octonion_pow(octonion_pow(o, make_octonion(2)) - make_octonion(1.0), make_octonion(0.5))
+    return octonion_log(o + sqrt_term)
+
+@njit
+def octonion_artanh(o):
+    log_num = octonion_log(make_octonion(1.0) + o)
+    log_den = octonion_log(make_octonion(1.0) - o)
+    return (log_num - log_den) / 2
+
+@njit
+def octonion_arcoth(o):
+    log_num = octonion_log(o + make_octonion(1.0))
+    log_den = octonion_log(o - make_octonion(1.0))
+    return (log_num - log_den) / 2
+
+@njit
+def octonion_arsech(o):
+    return octonion_arcosh(make_octonion(1.0) / o)
+
+@njit
+def octonion_arcsch(o):
+    return octonion_arsinh(make_octonion(1.0) / o)
