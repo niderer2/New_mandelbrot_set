@@ -143,12 +143,15 @@ def create_gradient(color1, color2, m, if_color):
     return gradient
 
 
-def render(name, min_x, max_x, min_y, max_y, min_h, max_h, min_z, max_z, min_t, max_t, min_u, max_u, min_v, max_v, min_w, max_w, z_funct, max_iterations, escape_radius, color1, color2, color3, scale_type, log_type, if_while, len_colors):
+def render(name, total_x, total_y, 
+           min_x, max_x, min_y, max_y, min_h, max_h, min_z, max_z, min_t, max_t, min_u, max_u, min_v, max_v, min_w, max_w, 
+           z_funct, custom_func, scape_condition, funct_once,
+           max_iterations, color1, color2, color3, eror_color, 
+           scale_type, log_type, if_while, len_colors):
     # Обрабатываем текст в функцию
-    z_function = compiledExpression(z_funct, functions)
+    z_function = compiledExpression(z_funct, custom_func, scape_condition, funct_once, functions)
     
     # Начальные параметры
-    total_x, total_y = 300, 300  # Общий размер итогового изображения
     chunk_size = 100             # Размер сектора: 100x100
     len_gradient = 100
     k1, k10 = 1, 10 #коофиценты генерации если ранж равен и не равен друг другу
@@ -232,8 +235,8 @@ def render(name, min_x, max_x, min_y, max_y, min_h, max_h, min_z, max_z, min_t, 
                                     for yi_idx, yi in enumerate(tqdm(y_chunk, desc=f"h={hi:.3f}, сектор y[{y_start}:{y_end}]")):
                                         # Вычисляем цвета для текущей строки сектора
                                         colors = z_function(wi, vi, ui, ti, zi, hi, yi, np.array(x_chunk),
-                                                              max_iterations, escape_radius,
-                                                              np.array(gradient), color3, scale_type, log_type, if_while, len_colors)
+                                                              max_iterations,
+                                                              np.array(gradient), color3, eror_color, scale_type, log_type, if_while, len_colors)
                                         block_image[yi_idx, :, :] = colors
                                         
                                         # Обновляем информационный текст: текущий сектор и процент выполнения строки в секторе

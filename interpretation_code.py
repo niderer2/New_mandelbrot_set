@@ -33,44 +33,53 @@ def z_index(z, gradient, iteration, max_iterations, scale_type, log_type, escape
     
         return int(index % len(gradient))
 
-def compiledExpression(expr: str, functions: list):
+def compiledExpression(z_funct, custom_func, scape_condition, funct_once, functions):
     # Словарь с контекстом для функций, которые будут использоваться
     context = {name: func for name, func in functions}
-
+    
+    funct_once = textwrap.indent(funct_once.strip(), ' ' * 8)
+    custom_func = textwrap.indent(custom_func.strip(), ' ' * 12)
+    
     # Создаем строку кода с динамически вычисляемым выражением
-    # Переменные (их имена) передаем как параметры функции
-    code = textwrap.dedent(f"""
-        import numpy as np  # Добавляем импорт numpy
-        @njit(parallel=True)
-        def compiled_func(wi, vi, ui, ti, zi, hi, yi, x, max_iterations, escape_radius, gradient, color3, scale_type, log_type, if_while, len_colors):
-            colors = np.zeros((len(x), 3), dtype=np.uint8)  # Массив для цветов
-            for len_x in prange(len(x)):  # Проходим по всем элементам x
-                xi = x[len_x]
-                m = 0 #заглушка для реверса
-                c = np.array([xi, yi, hi, zi, ti, ui, vi, wi])
-                z = np.array([xi, yi, hi, zi, ti, ui, vi, wi])
-                for i in range(max_iterations):
-                    # Применяем переданное выражение прямо в коде
-                    z = {expr}
-                    
-                    if z is None:
-                        colors[len_x] = gradient[0]
-                        break
-                    elif norm(z) > escape_radius:
-                        colors[len_x] = gradient[z_index(z, gradient, i, max_iterations, scale_type, log_type, escape_radius)]
-                        break
-            
-                if i == max_iterations - 1:
-                    colors[len_x] = color3
-            return colors
-    """)
 
+    code = f"""
+    
+import numpy as np
+@njit(parallel=True)
+def compiled_func(wi, vi, ui, ti, zi, hi, yi, x, max_iterations, gradient, color3, eror_color, scale_type, log_type, if_while, len_colors):
+    colors = np.zeros((len(x), 3), dtype=np.uint8)  # Массив для цветов
+    for len_x in prange(len(x)):  # Проходим по всем элементам x
+        xi = x[len_x]
+{funct_once}
+        for i in range(max_iterations):
+{custom_func}
+            z = {z_funct}
+                    
+            if z is None:
+                colors[len_x] = gradient[0]
+                break
+            elif {scape_condition}:
+                colors[len_x] = gradient[z_index(z, gradient, i, max_iterations, scale_type, log_type, {scape_condition.split(' ')[-1]})]
+                break
+            
+        if i == max_iterations - 1:
+            colors[len_x] = color3
+    return colors
+"""
     # Контекст для exec
-    exec_context = {'njit': njit}  # Добавляем только необходимое из контекста
+    exec_context = {'njit': njit}
     exec_context.update(context)
 
-    # Компиляция и возвращение скомпилированной функции
-    exec(code, exec_context)
+    try:
+        # Компиляция и возвращение скомпилированной функции
+        exec(code, exec_context)
+    except Exception as e:
+        print("Ошибка при компиляции сгенерированной функции:")
+        print("-------- Сгенерированный код --------")
+        print(code)
+        print("-------- Конец кода --------")
+        raise e  # Пробрасываем исключение дальше для диагностики
+
     return exec_context['compiled_func']
 
 
