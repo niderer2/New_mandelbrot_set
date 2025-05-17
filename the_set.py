@@ -1,10 +1,11 @@
 from tqdm import tqdm
-from interpretation_code import compiledExpression, functions
+from interpretation_code import compiledExpression, functions, crutch_f
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 from numba import njit
 import gc
+import textwrap
 
 
 @njit
@@ -147,9 +148,11 @@ def render(name, total_x, total_y,
            min_x, max_x, min_y, max_y, min_h, max_h, min_z, max_z, min_t, max_t, min_u, max_u, min_v, max_v, min_w, max_w, 
            z_funct, custom_func, scape_condition, funct_once,
            max_iterations, color1, color2, color3, eror_color, 
-           scale_type, log_type, if_while, len_colors):
+           scale_type, log_type, if_while, len_colors,
+           check_var, moreinfo_var):
     # Обрабатываем текст в функцию
-    z_function = compiledExpression(z_funct, custom_func, scape_condition, funct_once, functions)
+    min_y, max_y = max_y, min_y
+    z_function = compiledExpression(z_funct, custom_func, scape_condition, funct_once, moreinfo_var, functions)
     
     # Начальные параметры
     chunk_size = 100             # Размер сектора: 100x100
@@ -174,95 +177,143 @@ def render(name, total_x, total_y,
     
     # Градиент
     gradient = create_gradient(color1, color2, len_gradient, len_colors)
-    
-    # Создаём главную папку для сохранения
-    main_folder = f'{name}'
-    os.makedirs(main_folder, exist_ok=True)
-    
-    # Итерируем по всем осям, создавая вложенные папки
-    for wi in w_vals:
-        folder_w = os.path.join(main_folder, f"{name}_w={wi:.3f}")
-        os.makedirs(folder_w, exist_ok=True)
+    if check_var: 
+        # Создаём главную папку для сохранения
+        main_folder = f'{name}'
+        os.makedirs(main_folder, exist_ok=True)
         
-        for vi in v_vals:
-            folder_v = os.path.join(folder_w, f"{name}_v={vi:.3f}")
-            os.makedirs(folder_v, exist_ok=True)
+        # Итерируем по всем осям, создавая вложенные папки
+        for wi in w_vals:
+            folder_w = os.path.join(main_folder, f"{name}_w={wi:.3f}")
+            os.makedirs(folder_w, exist_ok=True)
             
-            for ui in u_vals:
-                folder_u = os.path.join(folder_v, f"{name}_u={ui:.3f}")
-                os.makedirs(folder_u, exist_ok=True)
+            for vi in v_vals:
+                folder_v = os.path.join(folder_w, f"{name}_v={vi:.3f}")
+                os.makedirs(folder_v, exist_ok=True)
                 
-                for ti in t_vals:
-                    folder_t = os.path.join(folder_u, f"{name}_t={ti:.3f}")
-                    os.makedirs(folder_t, exist_ok=True)
+                for ui in u_vals:
+                    folder_u = os.path.join(folder_v, f"{name}_u={ui:.3f}")
+                    os.makedirs(folder_u, exist_ok=True)
                     
-                    for zi in z_vals:
-                        folder_z = os.path.join(folder_t, f"{name}_z={zi:.3f}")
-                        os.makedirs(folder_z, exist_ok=True)
+                    for ti in t_vals:
+                        folder_t = os.path.join(folder_u, f"{name}_t={ti:.3f}")
+                        os.makedirs(folder_t, exist_ok=True)
                         
-                        for hi in h_vals:
-                            # Создаём пустое итоговое изображение для сборки блоков
-                            full_image = np.zeros((total_y, total_x, 3), dtype=np.uint8)
+                        for zi in z_vals:
+                            folder_z = os.path.join(folder_t, f"{name}_z={zi:.3f}")
+                            os.makedirs(folder_z, exist_ok=True)
                             
-                            # Создаём окно для визуализации в реальном времени
-                            fig, ax = plt.subplots(figsize=(10, 10))
-                            plt.ion()  # Режим интерактивного отображения
-                            im_plot = ax.imshow(full_image, origin='upper')
-                            
-                            # Добавляем текстовое поле для отображения прогресса
-                            progress_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='white', fontsize=12,
-                                                      bbox=dict(facecolor='black', alpha=0.5))
-                            
-                            ax.set_title(f"Срез h = {hi:.3f}")
-                            plt.show()
-                            
-                            # Перебор по блокам (секции) по оси y
-                            for y_start in range(0, total_y, chunk_size):
-                                y_end = min(y_start + chunk_size, total_y)
-                                y_chunk = y_all[y_start:y_end]
+                            for hi in h_vals:
+                                # Создаём пустое итоговое изображение для сборки блоков
+                                full_image = np.zeros((total_y, total_x, 3), dtype=np.uint8)
                                 
-                                # Перебор по блокам (секции) по оси x
-                                for x_start in range(0, total_x, chunk_size):
-                                    x_end = min(x_start + chunk_size, total_x)
-                                    x_chunk = x_all[x_start:x_end]
+                                # Создаём окно для визуализации в реальном времени
+                                fig, ax = plt.subplots(figsize=(10, 10))
+                                plt.ion()  # Режим интерактивного отображения
+                                im_plot = ax.imshow(full_image, origin='upper')
+                                
+                                # Добавляем текстовое поле для отображения прогресса
+                                progress_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='white', fontsize=12,
+                                                          bbox=dict(facecolor='black', alpha=0.5))
+                                
+                                ax.set_title(f"Срез h = {hi:.3f}")
+                                plt.show()
+                                
+                                # Перебор по блокам (секции) по оси y
+                                for y_start in range(0, total_y, chunk_size):
+                                    y_end = min(y_start + chunk_size, total_y)
+                                    y_chunk = y_all[y_start:y_end]
                                     
-                                    # Массив для хранения текущего блока
-                                    block_height = len(y_chunk)
-                                    block_width = len(x_chunk)
-                                    block_image = np.zeros((block_height, block_width, 3), dtype=np.uint8)
-                                    
-                                    # Обработка каждого ряда в блоке
-                                    for yi_idx, yi in enumerate(tqdm(y_chunk, desc=f"h={hi:.3f}, сектор y[{y_start}:{y_end}]")):
-                                        # Вычисляем цвета для текущей строки сектора
-                                        colors = z_function(wi, vi, ui, ti, zi, hi, yi, np.array(x_chunk),
-                                                              max_iterations,
-                                                              np.array(gradient), color3, eror_color, scale_type, log_type, if_while, len_colors)
-                                        block_image[yi_idx, :, :] = colors
+                                    # Перебор по блокам (секции) по оси x
+                                    for x_start in range(0, total_x, chunk_size):
+                                        x_end = min(x_start + chunk_size, total_x)
+                                        x_chunk = x_all[x_start:x_end]
                                         
-                                        # Обновляем информационный текст: текущий сектор и процент выполнения строки в секторе
-                                        percentage = (yi_idx + 1) / block_height * 100
-                                        progress_text.set_text(f"Сектор (x: {x_start}-{x_end}, y: {y_start}-{y_end})\nСтрока {yi_idx+1}/{block_height} ({percentage:.1f}%)")
+                                        # Массив для хранения текущего блока
+                                        block_height = len(y_chunk)
+                                        block_width = len(x_chunk)
+                                        block_image = np.zeros((block_height, block_width, 3), dtype=np.uint8)
                                         
-                                        # Обновляем визуализацию
-                                        full_image[y_start + yi_idx, x_start:x_end, :] = colors
+                                        # Обработка каждого ряда в блоке
+                                        for yi_idx, yi in enumerate(tqdm(y_chunk, desc=f"h={hi:.3f}, сектор y[{y_start}:{y_end}]")):
+                                            # Вычисляем цвета для текущей строки сектора
+                                            colors = z_function(wi, vi, ui, ti, zi, hi, yi, np.array(x_chunk),
+                                                                  max_iterations,
+                                                                  np.array(gradient), color3, eror_color, scale_type, log_type, if_while, len_colors)
+                                            block_image[yi_idx, :, :] = colors
+                                            
+                                            # Обновляем информационный текст: текущий сектор и процент выполнения строки в секторе
+                                            percentage = (yi_idx + 1) / block_height * 100
+                                            progress_text.set_text(f"Сектор (x: {x_start}-{x_end}, y: {y_start}-{y_end})\nСтрока {yi_idx+1}/{block_height} ({percentage:.1f}%)")
+                                            
+                                            # Обновляем визуализацию
+                                            full_image[y_start + yi_idx, x_start:x_end, :] = colors
+                                            im_plot.set_data(full_image)
+                                            fig.canvas.draw_idle()
+                                            plt.pause(0.001)
+                                            gc.collect()
+                                        
+                                        # После завершения сектора, вставляем готовый блок в итоговое изображение
+                                        full_image[y_start:y_end, x_start:x_end, :] = block_image
+                                        
+                                        # Обновляем изображение, чтобы отобразить вставку блока
                                         im_plot.set_data(full_image)
                                         fig.canvas.draw_idle()
                                         plt.pause(0.001)
-                                        gc.collect()
-                                    
-                                    # После завершения сектора, вставляем готовый блок в итоговое изображение
-                                    full_image[y_start:y_end, x_start:x_end, :] = block_image
-                                    
-                                    # Обновляем изображение, чтобы отобразить вставку блока
-                                    im_plot.set_data(full_image)
-                                    fig.canvas.draw_idle()
-                                    plt.pause(0.001)
-                            
-                            # Сохранение итогового изображения для текущего среза hi
-                            filename = os.path.join(folder_z, f"{name}_h={hi:.3f}_image.png")
-                            plt.imsave(filename, full_image)
-                            print(f"Сохранено изображение: {filename}")
-                            
-                            # Закрываем окно визуализации для текущего среза
-                            plt.ioff()
-                            plt.close(fig)
+                                
+                                # Сохранение итогового изображения для текущего среза hi
+                                filename = os.path.join(folder_z, f"{name}_h={hi:.3f}_image.png")
+                                plt.imsave(filename, full_image)
+                                print(f"Сохранено изображение: {filename}")
+                                
+                                # Закрываем окно визуализации для текущего среза
+                                plt.ioff()
+                                plt.close(fig)
+    else:
+        funct_once = textwrap.indent(funct_once.strip(), ' ' * 4)
+        custom_func = textwrap.indent(custom_func.strip(), ' ' * 8) 
+        print('-------------------------')
+        g = (f'''
+def g(wi, vi, ui, ti, zi, hi, yi, xi, max_iterations, gradient, color3, eror_color, scale_type, log_type, if_while, len_colors):
+{funct_once}
+    for i in range(max_iterations):
+{custom_func}
+        z = {z_funct}
+                                
+        if z is None:
+            print("образован None")
+            print(gradient[0])
+            break
+        elif {scape_condition}:
+            print("выход за пределы, точка не пренадлежит множеству, мы это поняли за " + str(i) + " итераций")
+            print("z:", z)
+            print("c:", c)
+            print(gradient[z_index(z, gradient, i, max_iterations, scale_type, log_type, {scape_condition.split(' ')[-1]})])
+            break
+        
+    if i == max_iterations - 1:
+        print("точка пренадлежит множеству")
+        print(color3)           
+            ''') 
+        print(g)
+        print('-------------------------')
+        g = crutch_f(g, functions)
+        while True:
+            n = input('введите координаты точки(или None для остановки):').split(' ')
+            var = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            for i in range(len(n)):
+                if i < 8: 
+                    if not (n[i] is None):
+                        var[i] = float(n[i])
+                    else:
+                        break
+            xi, yi, hi, zi, ti, ui, vi, wi = var
+            print(xi, yi, hi, zi, ti, ui, vi, wi)
+            print()
+            try:
+                g(wi, vi, ui, ti, zi, hi, yi, xi, max_iterations, gradient, color3, eror_color, scale_type, log_type, if_while, len_colors)
+            except Exception as e:
+                print('вызвана ошибка:', e)
+                print('это приведёт к строке из цвета', eror_color)
+                
+            

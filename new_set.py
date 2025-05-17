@@ -6,6 +6,13 @@ import os
 import multiprocessing
 import the_set
 from func_defef import hex_to_rgb
+from func_defef import shrink_range
+
+import psutil
+
+print("Физических ядер:", psutil.cpu_count(logical=False))
+print("Логических ядер:", psutil.cpu_count(logical=True))
+
 
 if __name__ == '__main__':
 
@@ -20,7 +27,15 @@ if __name__ == '__main__':
             log_option_frame.grid()
         else:
             log_option_frame.grid_forget()
-
+    
+    def submit2():
+        try:
+            if not agreement_var.get():
+                raise ValueError("Вы должны согласиться с условиями пользования.")
+        
+            shrink_range()
+        except Exception as e:
+            messagebox.showerror("Ошибка", str(e))        
     def submit():
         try:
             if not agreement_var.get():
@@ -54,8 +69,10 @@ if __name__ == '__main__':
                 log_scale_var.get(), #красивый или правильный
                 scale_var_w.get(), #цикличный или ровный градиент
                 len_colors.get(), #длинна градиента котороткий или длинный
+                not check_var.get(), moreinfo_var.get(), #режим проверки точек, больше информации пользователю
                 ]
-            print(d)
+            if moreinfo_var.get():
+                print(d)
             the_set.render(*d)
 
         except Exception as e:
@@ -63,7 +80,7 @@ if __name__ == '__main__':
 
     root = tk.Tk()
     root.title("Настройки множества")
-    root.geometry("500x500")  # уже более компактно по вертикали
+    root.geometry("500x500")
 
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
@@ -99,7 +116,18 @@ if __name__ == '__main__':
     image_height_entry = ttk.Entry(main_frame)
     image_height_entry.grid(row=2, column=3, sticky="ew")
     image_height_entry.insert(0, "300")
-
+    
+    # Чекбокс режима проверки точек
+    check_var = tk.BooleanVar()
+    check_check = ttk.Checkbutton(main_frame, text="Режим проверки точек", variable=check_var)
+    check_check.grid(row=1, column=6, pady=0)
+    
+    # Чекбокс согласия
+    moreinfo_var = tk.BooleanVar()
+    moreinfo_check = ttk.Checkbutton(main_frame, text="Больше информации", variable=moreinfo_var)
+    moreinfo_check.grid(row=2, column=6, pady=0)
+ 
+  
     # Координаты и переменные
     ttk.Label(main_frame, text="Координаты и переменные", font=("Arial", 14, "bold")).grid(row=3, column=0, columnspan=4, pady=(10,5), sticky="w")
     # X
@@ -298,6 +326,10 @@ z = np.array([xi, yi, hi, zi, ti, ui, vi, wi])''')
     apply_btn = ttk.Button(main_frame, text="Применить", command=submit)
     apply_btn.grid(row=current_row, column=0, columnspan=4, pady=10)
 
+    current_row += 1
+    
+    apply_btn = ttk.Button(main_frame, text="Калькулятор приближения", command=submit2)
+    apply_btn.grid(row=0, column=5, columnspan=4, pady=10)    
     for i in range(4):
         main_frame.columnconfigure(i, weight=1)
 

@@ -21,19 +21,19 @@ def z_index(z, gradient, iteration, max_iterations, scale_type, log_type, escape
         if iteration <= 0:
             index = 0
         else:
-            alpha = np.log(iteration) / np.log(max_iterations) 
+            alpha = np.log(iteration + 1) / np.log(max_iterations) 
             endet = np.log(1 + escape_radius)
             if log_type == "beautiful":
                 zet = 1
             else:
-                zet = np.log(1 + octonion_norm(z))
+                zet = np.log(np.absolute(1 + octonion_norm(z)))
             alpha = alpha * endet * zet
             index = alpha * (len(gradient) - 1)
     
     
         return int(index % len(gradient))
 
-def compiledExpression(z_funct, custom_func, scape_condition, funct_once, functions):
+def compiledExpression(z_funct, custom_func, scape_condition, funct_once, moreinfo_var, functions):
     # Словарь с контекстом для функций, которые будут использоваться
     context = {name: func for name, func in functions}
     
@@ -43,8 +43,6 @@ def compiledExpression(z_funct, custom_func, scape_condition, funct_once, functi
     # Создаем строку кода с динамически вычисляемым выражением
 
     code = f"""
-    
-import numpy as np
 @njit(parallel=True)
 def compiled_func(wi, vi, ui, ti, zi, hi, yi, x, max_iterations, gradient, color3, eror_color, scale_type, log_type, if_while, len_colors):
     colors = np.zeros((len(x), 3), dtype=np.uint8)  # Массив для цветов
@@ -55,7 +53,7 @@ def compiled_func(wi, vi, ui, ti, zi, hi, yi, x, max_iterations, gradient, color
 {custom_func}
             z = {z_funct}
                     
-            if z is None:
+            if z is None or np.any(np.isnan(z)) or np.any(np.isinf(z)):
                 colors[len_x] = gradient[0]
                 break
             elif {scape_condition}:
@@ -73,6 +71,10 @@ def compiled_func(wi, vi, ui, ti, zi, hi, yi, x, max_iterations, gradient, color
     try:
         # Компиляция и возвращение скомпилированной функции
         exec(code, exec_context)
+        if moreinfo_var:
+            print("-------- Сгенерированный код --------")
+            print(code)
+            print("-------- Конец кода --------")            
     except Exception as e:
         print("Ошибка при компиляции сгенерированной функции:")
         print("-------- Сгенерированный код --------")
@@ -82,7 +84,11 @@ def compiled_func(wi, vi, ui, ti, zi, hi, yi, x, max_iterations, gradient, color
 
     return exec_context['compiled_func']
 
-
+def crutch_f(g, functions):
+    context = {name: func for name, func in functions}
+    j = {}
+    exec(g, context, j)
+    return j['g']
 
 def cot(vector):
     return 1 / np.tan(vector)
@@ -99,6 +105,7 @@ def coth(vector):
 functions = np.array([
    ('z_index', z_index),  
    ('prange', prange), 
+   ('np', np),
    
    ('n_sin', np.sin), 
    ('n_cos', np.cos),

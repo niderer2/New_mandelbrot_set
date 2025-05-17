@@ -16,6 +16,19 @@ def hex_to_rgb(hex_color):
     
     return (r, g, b)
 
+def shrink_range():
+    """Сжимает диапазон [a, b] к центру в n раз."""
+    print('укажите значения точек каждое в отдельной строке:')
+    a, b = float(input()), float(input())
+    n = float(input('Укажите кол-во раз приближения:'))
+    if n == 0:
+        raise ValueError("n не может быть нулём")
+    center = (a + b) / 2
+    half_length = (b - a) / (2 * n)
+    new_a = center - half_length
+    new_b = center + half_length
+    print(new_a, new_b)
+
 @njit
 def gamma_function(n):
     return np.sqrt(2 * np.pi) * (n / np.e) ** n
@@ -30,8 +43,23 @@ def betta_function(n, m):
 
 # norm(o): sqrt(a^2 + b^2 + ...)
 @njit
-def octonion_norm(o):
-    return math.sqrt(np.sum(o ** 2))
+def octonion_norm(o_arr):
+    # Используем алгоритм масштабирования для устойчивой евклидовой нормы
+    scale = 0.0
+    sum_squares = 1.0
+
+    for i in range(8):
+        val = abs(o_arr[i])
+        if val != 0:
+            if val > scale:
+                t = scale / val
+                sum_squares = 1.0 + sum_squares * t * t
+                scale = val
+            else:
+                t = val / scale
+                sum_squares = sum_squares + t * t
+
+    return scale * math.sqrt(sum_squares)
 
 
 # vector_norm(o): sqrt(b^2 + ... + h^2)
@@ -199,7 +227,7 @@ def octonion_sin(o, n=0):
     temp1 = octonion_exp(io)
     temp2 = octonion_exp(neg_io)
     diff = temp1 - temp2
-    denom = multiply_octonions(make_octonion(0, 1), make_octonion(2), s[2] == 1 if len(s) > 2 else False)
+    denom = make_octonion(0, 2)
     
     return divide_octonions(diff, denom)
 
@@ -238,11 +266,11 @@ def octonion_csc(o, n=0):
 # Гиперболические функции
 @njit
 def octonion_sinh(o):
-    return divide_octonions((octonion_exp(o) - octonion_exp(-o)), make_octonion(2.0))
+    return divide_octonions((octonion_exp(o) - octonion_exp(-o)), make_octonion(2))
 
 @njit
 def octonion_cosh(o):
-    return divide_octonions((octonion_exp(o) + octonion_exp(-o)), make_octonion(2.0))
+    return divide_octonions((octonion_exp(o) + octonion_exp(-o)), make_octonion(2))
 
 @njit
 def octonion_tanh(o):
@@ -265,11 +293,10 @@ def octonion_csch(o):
 def octonion_arcsin(o, n=0):
     s = [(n >> i) & 1 for i in range(4)]
     io = multiply_octonions(make_octonion(0, 1), o, bool(s[0]))
-    o2 = multiply_octonions(o, o, bool(s[1]))
+    o2 = octonion_pow(o, make_octonion(2))
     sqrt_term = octonion_pow(make_octonion(1.0) - o2, make_octonion(0.5))
-    term = multiply_octonions(make_octonion(0, 1), sqrt_term, bool(s[2]))
-    log_val = octonion_log(io + term, n)
-    return -multiply_octonions(make_octonion(0, 1), log_val, bool(s[3]))
+    log_val = octonion_log(io + sqrt_term)
+    return multiply_octonions(make_octonion(0, -1), log_val, bool(s[1]))
 
 
 @njit
@@ -280,9 +307,8 @@ def octonion_arccos(o, n=0):
 def octonion_arctan(o, n=0):
     s = [(n >> i) & 1 for i in range(2)]
     io = multiply_octonions(make_octonion(0, 1), o, bool(s[0]))
-    half = (
-        octonion_log(make_octonion(1.0) + io, n) - octonion_log(make_octonion(1.0) - io, n)) / make_octonion(2.0)
-    return multiply_octonions(make_octonion(0, 1), half, bool(s[1]))
+    half = octonion_log(divide_octonions((octonion_log(make_octonion(1.0) - io)), octonion_log(make_octonion(1.0) + io)))
+    return multiply_octonions(make_octonion(0, 0.5), half, bool(s[1]))
 
 
 @njit
